@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC
+        "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+    
+<mapper namespace="club.fastim.web.dao.ShiroDAO">
+
+    <resultMap id="resultUserAuths" type="club.fastim.web.entity.UserAuths">
+        <id column="mobile" property="principal"/>
+        <collection property="roles" ofType="string">
+            <constructor>
+                <arg column="role_name"/>
+            </constructor>
+        </collection>
+        <collection property="perms" ofType="string">
+            <constructor>
+                <arg column="perm_exp"/>
+            </constructor>
+        </collection>
+    </resultMap>
+    <select id="getUserAuths" parameterType="object" resultMap="resultUserAuths" useCache="false" flushCache="true">
+        SELECT ua.mobile, r.role_name, p.perm_exp FROM mt_user_account ua
+        LEFT JOIN mt_user_role ur ON ua.mobile = ur.mobile
+        LEFT JOIN mt_role r ON ur.rid = r.rid AND r.status = 1
+        LEFT JOIN mt_role_permission rp ON r.rid = rp.rid
+        LEFT JOIN mt_permission p ON rp.pid = p.pid AND p.status = 1
+        WHERE ua.mobile = #{principal} AND ua.status = 1
+    </select>
+
+    <resultMap id="resultUserAccount" type="club.fastim.web.entity.UserAccount">
+        <id column="mobile" property="mobile"/>
+        <result column="password" property="password"/>
+        <result column="type" property="type"/>
+        <result column="status" property="status"/>
+        <result column="ret_date" property="reg_date"/>
+        <result column="mobile" property="principal"/>
+    </resultMap>
+    <select id="getAbstractUser" resultMap="resultUserAccount">
+        SELECT mobile, password, type, status, reg_date FROM mt_user_account
+        WHERE mobile = #{principal} AND password = #{password}
+    </select>
+
+    <select id="getAllUrlAccessStrategy" resultType="club.fastim.web.entity.UrlAccessStrategy">
+        SELECT url, filters, priorities FROM mt_url_access_strategy
+        WHERE status = 1 ORDER BY priorities
+    </select>
+
+</mapper>

@@ -1,0 +1,24 @@
+spring:
+  shiro:
+    hash-algorithm-name: MD5    # 哈希加密算法名：MD5、SHA-1、SHA-256
+    hash-iterations: 1024      # 哈希迭代次数
+    session-timeout: 1800000   # session 超时时间，默认1800000毫秒
+    cookie-timeout: 2592000      # rememberMe cookie有效时长(秒)，默认30天(2592000L)
+    login-url: /login          # 登录 url
+    success-url: /index  # 登录成功后跳转的 url
+    unauthorized-url: /403   # 未授权跳转 url
+    login-count: 5    # SHIRO登录次数计数器，超过5次时锁定帐户（一定）时间
+    lock-account-time: 60    # 锁定帐户时长(单位：分钟)
+    expire-in: 1800            # shiro redis缓存时长（单位：秒）
+    debug-log: true     # 是否打印debug日志，true==》打印，false==》不打印
+  redis:
+    host: 127.0.0.1
+    lettuce:
+      pool:
+        max-active: 20
+        max-idle: 15
+        max-wait: -1
+        min-idle: 2
+    password: eric0117
+    port: 6379
+    timeout: 10000
