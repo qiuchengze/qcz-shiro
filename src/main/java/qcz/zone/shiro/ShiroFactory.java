@@ -1,17 +1,22 @@
 package qcz.zone.shiro;
 
+import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
+import org.apache.shiro.authz.AuthorizationException;
 import org.apache.shiro.codec.Base64;
 import org.apache.shiro.mgt.RememberMeManager;
+import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.web.mgt.CookieRememberMeManager;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.shiro.web.servlet.SimpleCookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
+import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver;
 import qcz.zone.shiro.config.ShiroConstant;
 import qcz.zone.shiro.config.ShiroProperties;
 import qcz.zone.shiro.entity.AbstractUrlAccessStrategy;
@@ -31,6 +36,7 @@ import javax.validation.constraints.NotNull;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * @author: qiuchengze
@@ -396,5 +402,52 @@ public class ShiroFactory {
         simpleCookie.setMaxAge(ShiroConstant.SHIRO_CONFIG_COOKIE$TIMEOUT);
 
         return simpleCookie;
+    }
+
+    /**
+     * 默认的Advisor（一个Advisor是一个切入点和一个通知的组成，AOP）自动代理创建器，装配注解（无此可能造成无法使用授权注解）
+     * 【 如果不需要使用授权注解，则可以忽略 】
+     * @return
+     */
+    public DefaultAdvisorAutoProxyCreator createDefaultAdvisorAutoProxyCreator() {
+        DefaultAdvisorAutoProxyCreator proxyCreator = new DefaultAdvisorAutoProxyCreator();
+        proxyCreator.setProxyTargetClass(true);
+
+        return proxyCreator;
+    }
+
+    /**
+     * 授权属性源注解解释（无此无法使用授权注解）
+     * 【 如果不需要使用授权注解，则可以忽略 】
+     * @param securityManager
+     * @return
+     */
+    public AuthorizationAttributeSourceAdvisor createAuthorizationAttributeSourceAdvisor(DefaultWebSecurityManager securityManager) {
+        AuthorizationAttributeSourceAdvisor advisor = new AuthorizationAttributeSourceAdvisor();
+        advisor.setSecurityManager(securityManager);
+
+        return advisor;
+    }
+
+    /**
+     * Shiro异常捕获跳转
+     * 【 如果采用Spring默认异常处理，则可以忽略 】
+     * @return
+     */
+    public SimpleMappingExceptionResolver simpleMappingExceptionResolver() {
+        SimpleMappingExceptionResolver simpleMappingExceptionResolver = new SimpleMappingExceptionResolver();
+
+        Properties properties = new Properties();
+        properties.setProperty(
+                AuthenticationException.class.getName(),
+                ShiroConstant.SHIRO_CONFIG_UNAUTHORIZED$URL);  // 身份认证异常跳转
+
+        properties.setProperty(
+                AuthorizationException.class.getName(),
+                ShiroConstant.SHIRO_CONFIG_UNAUTHORIZED$URL);  // 授权异常跳转
+
+        simpleMappingExceptionResolver.setExceptionMappings(properties);
+
+        return simpleMappingExceptionResolver;
     }
 }

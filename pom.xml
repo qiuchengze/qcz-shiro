@@ -12,7 +12,7 @@
 
     <properties>
         <spring-boot.version>2.2.0.RELEASE</spring-boot.version>
-        <shiro-springboot.version>1.4.1</shiro-springboot.version>
+        <shiro.version>1.4.1</shiro.version>
         <log.version>1.2.3</log.version>
         <qcz-redis.version>1.0.0</qcz-redis.version>
     </properties>
@@ -40,8 +40,8 @@
 
         <dependency>
             <groupId>org.apache.shiro</groupId>
-            <artifactId>shiro-spring-boot-starter</artifactId>
-            <version>${shiro-springboot.version}</version>
+            <artifactId>shiro-spring</artifactId>
+            <version>${shiro.version}</version>
         </dependency>
 
         <!-- log -->

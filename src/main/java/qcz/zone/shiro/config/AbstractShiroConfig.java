@@ -1,6 +1,7 @@
 package qcz.zone.shiro.config;
 
 import org.apache.shiro.mgt.RememberMeManager;
+
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.apache.shiro.web.mgt.CookieRememberMeManager;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
