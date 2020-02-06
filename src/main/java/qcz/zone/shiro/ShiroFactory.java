@@ -20,6 +20,7 @@ import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver;
 import qcz.zone.shiro.config.ShiroConstant;
 import qcz.zone.shiro.config.ShiroProperties;
 import qcz.zone.shiro.entity.AbstractUrlAccessStrategy;
+import qcz.zone.shiro.manager.StatelessWebSessionManager;
 import qcz.zone.shiro.redis.RedisSessionDAO;
 import qcz.zone.shiro.filter.AuthenticationFilter;
 import qcz.zone.shiro.filter.AuthorizationFilter;
@@ -258,22 +259,46 @@ public class ShiroFactory {
     }
 
     /**
-     * Session管理器（会话管理器）
-     * 【 使用自定义的Redis会话管理器 或 不使用Redis会话管理（不使用传null） 】
+     * 无状态Web会话管理器
+     * 【 如不使用Redis来缓存会话，则redisSessionDAO传null 】
+     * @param redisSessionDAO
+     * @return
+     */
+    public DefaultWebSessionManager createStatelessSessionManager(RedisSessionDAO redisSessionDAO) {
+        return createSessionManager(new StatelessWebSessionManager(), redisSessionDAO);
+    }
+    /**
+     * 默认Web会话管理器（默认Web类型会话管理器）
+     * 【 如不使用Redis来缓存会话，则redisSessionDAO传null 】
      * @param redisSessionDAO
      * @return
      */
     public DefaultWebSessionManager createSessionManager(RedisSessionDAO redisSessionDAO) {
-        DefaultWebSessionManager sessionManager = new DefaultWebSessionManager();
+        return createSessionManager(new DefaultWebSessionManager(), redisSessionDAO);
+    }
+
+    /**
+     * 自定义会话管理器
+     * 【 如不使用Redis来缓存会话，则redisSessionDAO传null 】
+     * @param sessionManager
+     * @param redisSessionDAO
+     * @return
+     */
+    public DefaultWebSessionManager createSessionManager(DefaultWebSessionManager sessionManager, RedisSessionDAO redisSessionDAO){
+        if (null == sessionManager)
+            throw new RuntimeException("sessionManager is null");
 
         // 缓存超时时间
         sessionManager.setGlobalSessionTimeout(ShiroConstant.SHIRO_CONFIG_SESSION$TIMEOUT);
         // 定时清理失效会话, 清理用户直接关闭浏览器造成的孤立会话
         // 缓存清理间隔时间
         sessionManager.setSessionValidationInterval(ShiroConstant.SHIRO_CONFIG_SESSION$TIMEOUT);
-        // 开启绑在清理
+        // 允许删除无效的会话
+        sessionManager.setDeleteInvalidSessions(true);
+        // 开启周期清理
         sessionManager.setSessionValidationSchedulerEnabled(true);
 
+        sessionManager.setSessionIdCookieEnabled(false);
 //        sessionManager.setSessionIdCookie(sessionIdCookie);    // 注入cookie
 //        sessionManager.setSessionIdCookieEnabled(true);     //
         sessionManager.setSessionIdUrlRewritingEnabled(false);  // 去掉shiro登录时url里的JSESSIONID
@@ -405,7 +430,11 @@ public class ShiroFactory {
     }
 
     /**
-     * 默认的Advisor（一个Advisor是一个切入点和一个通知的组成，AOP）自动代理创建器，装配注解（无此可能造成无法使用授权注解）
+     * 开启Shiro的注解（如@RequiresRoles,@RequiresPermissions），需借助SpringAOP扫描使用Shiro注解的类，并在必要时进行安全逻辑验证
+     * 配置以下两个Bean：
+     * DefaultAdvisorAutoProxyCreator（可选，无此可能造成无法使用授权注解）
+     * AuthorizationAttributeSourceAdvisor
+     * （一个Advisor是一个切入点和一个通知的组成，AOP）
      * 【 如果不需要使用授权注解，则可以忽略 】
      * @return
      */
@@ -417,7 +446,7 @@ public class ShiroFactory {
     }
 
     /**
-     * 授权属性源注解解释（无此无法使用授权注解）
+     * Shiro的注解解释（无此，无法使用授权注解）
      * 【 如果不需要使用授权注解，则可以忽略 】
      * @param securityManager
      * @return
