@@ -19,11 +19,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver;
 import qcz.zone.shiro.config.ShiroConstant;
 import qcz.zone.shiro.config.ShiroProperties;
-import qcz.zone.shiro.entity.AbstractUrlAccessStrategy;
+import qcz.zone.shiro.entity.ShiroUrlAccessStrategy;
 import qcz.zone.shiro.manager.StatelessWebSessionManager;
 import qcz.zone.shiro.redis.RedisSessionDAO;
-import qcz.zone.shiro.filter.AuthenticationFilter;
-import qcz.zone.shiro.filter.AuthorizationFilter;
+import qcz.zone.shiro.filter.ShiroAuthenticationFilter;
+import qcz.zone.shiro.filter.ShiroAuthorizationFilter;
 import qcz.zone.shiro.manager.RedisCacheManager;
 import qcz.zone.shiro.manager.RedisManager;
 import qcz.zone.shiro.realm.ShiroRealm;
@@ -129,23 +129,23 @@ public class ShiroFactory {
         shiroFilterFactoryBean.setUnauthorizedUrl(ShiroConstant.SHIRO_CONFIG_UNAUTHORIZED$URL);
 
         Map<String, Filter> mapFilters = new LinkedHashMap<String, Filter>();
-        mapFilters.put("authc", new AuthenticationFilter());
-        mapFilters.put("perms", new AuthorizationFilter());
+        mapFilters.put("perms", new ShiroAuthorizationFilter());
+        mapFilters.put("authc", new ShiroAuthenticationFilter());    // 先放入认证拦截器
 //        mapFilters.put("authc", new FormAuthenticationFilter());    // 表单认证过滤器
+        shiroFilterFactoryBean.setFilters(mapFilters);
 
-        Map<String, String> mapFilterChainDefinition = null;
-        List<AbstractUrlAccessStrategy> lstUrlAccessStrategy = shiroService.getAllUrlAccessStrategy();
+        List<ShiroUrlAccessStrategy> lstUrlAccessStrategy = (List<ShiroUrlAccessStrategy>) shiroService.getAllUrlAccessStrategy();
 
         if (!CollectionUtils.isEmpty(lstUrlAccessStrategy)) {
-            mapFilterChainDefinition = new LinkedHashMap<String, String>();
-            for (AbstractUrlAccessStrategy uas : lstUrlAccessStrategy) {
+            Map<String, String> mapFilterChainDefinition = new LinkedHashMap<String, String>();
+            for (ShiroUrlAccessStrategy uas : lstUrlAccessStrategy) {
                 if (null != uas)
                     mapFilterChainDefinition.put(uas.getUrl(), uas.getFilters());
             }
-        }
 
-        if (!CollectionUtils.isEmpty(mapFilterChainDefinition))
-            shiroFilterFactoryBean.setFilterChainDefinitionMap(mapFilterChainDefinition);
+            if (!CollectionUtils.isEmpty(mapFilterChainDefinition))
+                shiroFilterFactoryBean.setFilterChainDefinitionMap(mapFilterChainDefinition);
+        }
 
         return shiroFilterFactoryBean;
     }
@@ -181,6 +181,40 @@ public class ShiroFactory {
             RedisCacheManager redisCacheManager
     ) {
         return createSecurityManager(shiroRealm, sessionManager, redisCacheManager, null);
+    }
+
+    /**
+     * Web类型安全管理器
+     * 【 1. 使用内部提供的Redis缓存管理器 】
+     * 【 2. 使用自定义记住我功能 或 不使用记住我功能（不使用传null） 】
+     * @param shiroRealm
+     * @param sessionManager
+     * @param rememberMeManager
+     * @return
+     */
+    public DefaultWebSecurityManager createSecurityManager(
+            @NotNull ShiroRealm shiroRealm,
+            @NotNull DefaultWebSessionManager sessionManager,
+            RememberMeManager rememberMeManager
+    ) {
+        if (null == shiroRealm)
+            throw new RuntimeException("shiroRealm is null");
+        if (null == sessionManager)
+            throw new RuntimeException("sessionManager is null");
+
+        DefaultWebSecurityManager defaultWebSecurityManager = new DefaultWebSecurityManager();
+
+        defaultWebSecurityManager.setRealm(shiroRealm);
+        defaultWebSecurityManager.setSessionManager(sessionManager);
+
+        RedisCacheManager redisCacheManager = this.createRedisCacheManager();
+        if (null != redisCacheManager)
+            defaultWebSecurityManager.setCacheManager(redisCacheManager);
+
+        if (null != rememberMeManager)
+            defaultWebSecurityManager.setRememberMeManager(rememberMeManager);
+
+        return defaultWebSecurityManager;
     }
 
     /**
@@ -260,6 +294,16 @@ public class ShiroFactory {
 
     /**
      * 无状态Web会话管理器
+     * 【 使用内部提供的Redis会话管理器 】
+     * @return
+     */
+    public DefaultWebSessionManager createStatelessSessionManager() {
+        RedisSessionDAO redisSessionDAO = createRedisSessionDAO();
+        return createStatelessSessionManager(redisSessionDAO);
+    }
+
+    /**
+     * 无状态Web会话管理器
      * 【 如不使用Redis来缓存会话，则redisSessionDAO传null 】
      * @param redisSessionDAO
      * @return
@@ -267,6 +311,7 @@ public class ShiroFactory {
     public DefaultWebSessionManager createStatelessSessionManager(RedisSessionDAO redisSessionDAO) {
         return createSessionManager(new StatelessWebSessionManager(), redisSessionDAO);
     }
+
     /**
      * 默认Web会话管理器（默认Web类型会话管理器）
      * 【 如不使用Redis来缓存会话，则redisSessionDAO传null 】
@@ -298,9 +343,14 @@ public class ShiroFactory {
         // 开启周期清理
         sessionManager.setSessionValidationSchedulerEnabled(true);
 
-        sessionManager.setSessionIdCookieEnabled(false);
+        /**
+         * 是否将SessionId写入Cookie
+         * true==>写入：有状态环境（如：PC浏览器Web环境），此环境如果非true，则无法记录登录状态。
+         * false==>不写入：无状态环境，如：APP）
+         * 【 双模式，增加业务判断进行自适应动态设置 】
+         */
+        sessionManager.setSessionIdCookieEnabled(true);
 //        sessionManager.setSessionIdCookie(sessionIdCookie);    // 注入cookie
-//        sessionManager.setSessionIdCookieEnabled(true);     //
         sessionManager.setSessionIdUrlRewritingEnabled(false);  // 去掉shiro登录时url里的JSESSIONID
 
         // 注入自定义Session持久化器

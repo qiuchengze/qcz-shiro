@@ -35,7 +35,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-tomcat</artifactId>
             <version>${spring-boot.version}</version>
-            <scope>compile</scope>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -49,17 +49,20 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
             <version>${log.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${log.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>qcz.zone</groupId>
             <artifactId>qcz-redis</artifactId>
             <version>${qcz-redis.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

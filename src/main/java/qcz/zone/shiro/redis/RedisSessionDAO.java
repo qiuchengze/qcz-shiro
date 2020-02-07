@@ -5,6 +5,7 @@ import org.apache.shiro.session.SessionException;
 import org.apache.shiro.session.UnknownSessionException;
 import org.apache.shiro.session.mgt.ValidatingSession;
 import org.apache.shiro.session.mgt.eis.AbstractSessionDAO;
+import qcz.zone.shiro.config.ShiroConstant;
 import qcz.zone.shiro.manager.RedisManager;
 
 import java.io.Serializable;
@@ -20,7 +21,7 @@ public class RedisSessionDAO extends AbstractSessionDAO {
 
     private RedisManager redisManager = null;
     private String prefix = "shiro-redis.session:";
-    private Long ttl = null;
+    private Long ttl = ShiroConstant.SHIRO_CONFIG_SESSION$TIMEOUT;
 
     public RedisSessionDAO(RedisManager redisManager) {
         this(redisManager, null,null);
@@ -39,7 +40,7 @@ public class RedisSessionDAO extends AbstractSessionDAO {
         if (null != prefix)
             this.prefix = prefix;
 
-        if (null != ttl)
+        if (null != ttl && ttl > 0)
             this.ttl = ttl;
     }
 
@@ -55,7 +56,7 @@ public class RedisSessionDAO extends AbstractSessionDAO {
         Serializable sessionId = generateSessionId(session);
         assignSessionId(session, sessionId);
 
-        redisManager.set(getKey(sessionId), session);
+        redisManager.set(getKey(sessionId), session, ttl);
 
         return sessionId;
     }
@@ -80,7 +81,7 @@ public class RedisSessionDAO extends AbstractSessionDAO {
         if (null == session || null == session.getId())
             throw new UnknownSessionException("session or session id is null");
 
-        redisManager.set(getKey(session.getId()), session);
+        redisManager.set(getKey(session.getId()), session, ttl);
     }
 
     @Override

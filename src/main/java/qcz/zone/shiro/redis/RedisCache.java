@@ -3,10 +3,8 @@ package qcz.zone.shiro.redis;
 import org.apache.shiro.cache.Cache;
 import org.apache.shiro.cache.CacheException;
 import org.apache.shiro.subject.PrincipalCollection;
-import org.apache.shiro.subject.SimplePrincipalCollection;
 import qcz.zone.shiro.config.ShiroConstant;
-import qcz.zone.shiro.entity.AbstractUser;
-import qcz.zone.shiro.entity.impl.ShiroUser;
+import qcz.zone.shiro.entity.ShiroUser;
 import qcz.zone.shiro.manager.RedisManager;
 
 import java.util.*;
@@ -53,7 +51,8 @@ public class RedisCache<K, V> implements Cache<K, V> {
     }
 
     public void setTtl(Long ttl) {
-        this.ttl = ttl;
+        if (null != ttl)
+            this.ttl = ttl;
     }
 
     @Override

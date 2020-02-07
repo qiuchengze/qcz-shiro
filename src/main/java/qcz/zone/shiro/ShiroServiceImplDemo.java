@@ -1,14 +1,11 @@
 package qcz.zone.shiro;
 
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-import qcz.zone.shiro.entity.AbstractUrlAccessStrategy;
-import qcz.zone.shiro.entity.AbstractUser;
-import qcz.zone.shiro.entity.AbstractUserAuths;
+import qcz.zone.shiro.entity.ShiroUrlAccessStrategy;
+import qcz.zone.shiro.entity.ShiroUser;
+import qcz.zone.shiro.entity.ShiroUserAuths;
 import qcz.zone.shiro.service.ShiroService;
 
-import javax.annotation.Resource;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -26,24 +23,24 @@ public class ShiroServiceImplDemo implements ShiroService {
 
 
     @Override
-    public AbstractUser getAbstractUser(Object principal, String password) {
+    public ShiroUser getAbstractUser(Object principal, String password) {
 //        return shiroDAO.getAbstractUser(principal, password);
         return null;
     }
 
     @Override
-    public AbstractUserAuths getUserAuths(Object principal) {
+    public ShiroUserAuths getUserAuths(Object principal) {
 //        return shiroDAO.getUserAuths(principal);
         return null;
     }
 
     @Override
-    public List<AbstractUrlAccessStrategy> getAllUrlAccessStrategy() {
+    public List<ShiroUrlAccessStrategy> getAllUrlAccessStrategy() {
 //        List<UrlAccessStrategy> lstUrlAccessStrategy = shiroDAO.getAllUrlAccessStrategy();
 //        if (CollectionUtils.isEmpty(lstUrlAccessStrategy))
 //            return null;
 //
-//        return  new ArrayList<AbstractUrlAccessStrategy>(lstUrlAccessStrategy);
+//        return  lstUrlAccessStrategy;
         return null;
     }
 }

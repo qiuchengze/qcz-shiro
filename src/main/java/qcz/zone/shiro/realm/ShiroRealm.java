@@ -11,16 +11,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 import qcz.zone.shiro.config.ShiroConstant;
-import qcz.zone.shiro.entity.AbstractUser;
-import qcz.zone.shiro.entity.AbstractUserAuths;
-import qcz.zone.shiro.entity.impl.ShiroUser;
+import qcz.zone.shiro.entity.ShiroUser;
+import qcz.zone.shiro.entity.ShiroUserAuths;
 import qcz.zone.shiro.service.ShiroService;
 import qcz.zone.shiro.strategy.AbstractLoginStrategy;
 import qcz.zone.shiro.util.ConvertUtil;
 import qcz.zone.shiro.util.DesUtil;
 import qcz.zone.shiro.util.LogUtil;
-
-import java.lang.reflect.Field;
 
 /**
  * @author: qiuchengze
@@ -73,15 +70,15 @@ public class ShiroRealm extends AuthorizingRealm {
         if (null == shiroUser)
             return null;
 
-        AbstractUserAuths userAuths = shiroService.getUserAuths(shiroUser.getPrincipal());
-        if (null == userAuths)
+        ShiroUserAuths shiroUserAuths = shiroService.getUserAuths(shiroUser.getPrincipal());
+        if (null == shiroUserAuths)
             return null;
 
         SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
-        if (!CollectionUtils.isEmpty(userAuths.getRoles()))
-            authorizationInfo.setRoles(ConvertUtil.List2Set(userAuths.getRoles()));
-        if (!CollectionUtils.isEmpty(userAuths.getPerms()))
-            authorizationInfo.setStringPermissions(ConvertUtil.List2Set(userAuths.getPerms()));
+        if (!CollectionUtils.isEmpty(shiroUserAuths.getRoles()))
+            authorizationInfo.setRoles(ConvertUtil.List2Set(shiroUserAuths.getRoles()));
+        if (!CollectionUtils.isEmpty(shiroUserAuths.getPerms()))
+            authorizationInfo.setStringPermissions(ConvertUtil.List2Set(shiroUserAuths.getPerms()));
 
         return authorizationInfo;
     }
@@ -104,13 +101,16 @@ public class ShiroRealm extends AuthorizingRealm {
         if (null == principal || StringUtils.isEmpty(password))
             return null;
 
-        AbstractUser user = shiroService.getAbstractUser(principal, DesUtil.hashSaltMd5(password, principal));
+        ShiroUser user = shiroService.getAbstractUser(principal, DesUtil.hashSaltMd5(password, principal));
         if (null == user.getPrincipal())
             user.setPrincipal(principal);
 
         ShiroUser shiroUser = new ShiroUser(user.getPrincipal(), user.getPassword());
 
-        loginStrategy.isAllowed(shiroUser);  // 用户登录检验限制策略
+        boolean isAllowed = loginStrategy.isAllowed(shiroUser);  // 用户登录检验限制策略
+
+        if (!isAllowed)
+            throw new AuthenticationException("身份认证未通过");
 
         return new SimpleAuthenticationInfo(
                 shiroUser,

@@ -9,10 +9,10 @@ import java.util.List;
  * @web: http://www.fast-im.com/
  * @create: 2020 - 02 - 02
  */
-public abstract class AbstractUserAuths implements Serializable {
-    public Object principal;       // 用户唯一身份标识，如登录时的手机号，用户名等
-    public List<String> roles; // 用户角色集合
-    public List<String> perms; // 用户权限集合
+public class ShiroUserAuths<T> implements Serializable {
+    private Object principal;       // 用户唯一身份标识，如登录时的手机号，用户名等
+    private List<String> roles;     // 用户角色集合
+    private List<String> perms;     // 用户权限集合
 
     public Object getPrincipal() {
         return principal;

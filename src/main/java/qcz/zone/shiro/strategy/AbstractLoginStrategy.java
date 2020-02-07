@@ -1,6 +1,6 @@
 package qcz.zone.shiro.strategy;
 
-import qcz.zone.shiro.entity.AbstractUser;
+import qcz.zone.shiro.entity.ShiroUser;
 
 /**
  * @author: qiuchengze
@@ -10,5 +10,5 @@ import qcz.zone.shiro.entity.AbstractUser;
  */
 public interface AbstractLoginStrategy {
     // 入参为从数据库中读取的用户账户信息（用于根据用户信息进行业务判定，如果无需进行用户信息判定，则传null）
-    boolean isAllowed(AbstractUser user);
+    boolean isAllowed(ShiroUser user);
 }

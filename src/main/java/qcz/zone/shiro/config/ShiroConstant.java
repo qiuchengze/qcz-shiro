@@ -16,7 +16,7 @@ public class ShiroConstant {
     // SHIRO Config
     public static String SHIRO_CONFIG_HASH$ALGORITHM$NAME = "MD5";    // 哈希加密算法名：MD5、SHA-1、SHA-256
     public static Integer SHIRO_CONFIG_HASH$ITERATIONS_1024 = 1024;         // 哈希迭代次数
-    public static Long SHIRO_CONFIG_SESSION$TIMEOUT = 1800000L;     // session 超时时间，默认1800000毫秒
+    public static Long SHIRO_CONFIG_SESSION$TIMEOUT = 3600L;     // session 超时时间（单位：秒）
     public static Integer SHIRO_CONFIG_COOKIE$TIMEOUT = 2592000;      // rememberMe cookie有效时长(秒)，默认30天(2592000L)
     public static String SHIRO_CONFIG_LOGIN$URL = "/login";        // 登录 url
     public static String SHIRO_CONFIG_SUCCESS$URL = "/index";      // 登录成功后跳转的 url

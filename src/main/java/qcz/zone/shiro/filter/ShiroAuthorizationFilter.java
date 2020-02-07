@@ -2,6 +2,7 @@ package qcz.zone.shiro.filter;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.shiro.subject.Subject;
+import org.apache.shiro.web.filter.authz.AuthorizationFilter;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -18,7 +19,7 @@ import java.util.Set;
 /**
  * 自定义授权拦截器
  */
-public class AuthorizationFilter extends org.apache.shiro.web.filter.authz.AuthorizationFilter {
+public class ShiroAuthorizationFilter extends AuthorizationFilter {
 
     @Override
     protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object obj) throws Exception {

@@ -2,9 +2,8 @@ package qcz.zone.shiro.strategy.impl;
 
 import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.UnknownAccountException;
-import org.springframework.beans.factory.annotation.Autowired;
 import qcz.zone.shiro.config.ShiroConstant;
-import qcz.zone.shiro.entity.AbstractUser;
+import qcz.zone.shiro.entity.ShiroUser;
 import qcz.zone.shiro.redis.RedisShiroLock;
 import qcz.zone.shiro.strategy.AbstractLoginStrategy;
 
@@ -26,11 +25,11 @@ public class DefaultLoginStrategy implements AbstractLoginStrategy {
     }
 
     @Override
-    public boolean isAllowed(AbstractUser user) {
-        if (null == user)
+    public boolean isAllowed(ShiroUser shiroUser) {
+        if (null == shiroUser)
             throw new RuntimeException("user is null");
 
-        String principal = String.valueOf(user.getPrincipal());
+        String principal = String.valueOf(shiroUser.getPrincipal());
         if (null == principal)
             throw new RuntimeException("principal is null");
 
@@ -46,7 +45,7 @@ public class DefaultLoginStrategy implements AbstractLoginStrategy {
         // 访问一次，登录次数计数器加1
         redisShiroLock.incrCounter(principal);
 
-        if (null == user)
+        if (null == shiroUser)
             throw new UnknownAccountException("帐号或密码不正确！");
 //        if (UserStatusEM.NORMAL.getValue() != user.getStatus())
 //            throw new DisabledAccountException("帐号已被锁或禁用！");

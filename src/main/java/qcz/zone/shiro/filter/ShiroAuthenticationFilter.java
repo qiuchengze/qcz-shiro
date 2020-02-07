@@ -12,7 +12,7 @@ import org.apache.shiro.web.util.WebUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMethod;
-import qcz.zone.shiro.entity.AbstractUser;
+import qcz.zone.shiro.entity.ShiroUser;
 
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -36,7 +36,7 @@ import java.util.Map;
 /**
  * 自定义身份认证拦截器
  */
-public class AuthenticationFilter extends AccessControlFilter {
+public class ShiroAuthenticationFilter extends AccessControlFilter {
     private String kickoutUrl = "/kickout";     // 踢出后跳转地址
     private Boolean kickoutFirstLast = false;   // fasle==>踢出最早登录的，true==>踢出最后登录的
     private Integer maxSession = 1;     // 同一用户最大会话数，默认1个
@@ -45,9 +45,9 @@ public class AuthenticationFilter extends AccessControlFilter {
     private SessionManager sessionManager;
     private Cache<String, Deque<Serializable>> cache;
 
-    public AuthenticationFilter() {}
+    public ShiroAuthenticationFilter() {}
 
-    public AuthenticationFilter(String kickoutUrl, Boolean kickoutFirstLast, Integer maxSession) {
+    public ShiroAuthenticationFilter(String kickoutUrl, Boolean kickoutFirstLast, Integer maxSession) {
         if (!StringUtils.isEmpty(kickoutUrl))
             this.kickoutUrl = kickoutUrl;
 
@@ -96,6 +96,14 @@ public class AuthenticationFilter extends AccessControlFilter {
         response.setStatus(HttpStatus.OK.value());
     }
 
+    /**
+     * 拦截后先进入该方法。返回true，则直接结束当前请求并返回。如果返回false，则交由onAccessDenied处理鉴权与登录逻辑。
+     * @param request
+     * @param response
+     * @param obj
+     * @return
+     * @throws Exception
+     */
     @Override
     protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object obj) throws Exception {
         return false;
@@ -110,8 +118,8 @@ public class AuthenticationFilter extends AccessControlFilter {
             return true;
 
         Session session = subject.getSession();
-        AbstractUser user = (AbstractUser) subject.getPrincipal();
-        String principal = String.valueOf(user.getPrincipal());
+        ShiroUser shiroUser = (ShiroUser) subject.getPrincipal();
+        String principal = String.valueOf(shiroUser.getPrincipal());
         Serializable sessionId = session.getId();
 
         Deque<Serializable> deque = null;

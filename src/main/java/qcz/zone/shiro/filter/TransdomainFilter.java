@@ -15,8 +15,9 @@ import java.io.IOException;
  */
 
 /**
- * Shiro跨域访问拦截器
+ * 自定义单独的跨域访问拦截器
  * 【 适用简单http请求或复杂http请求 】
+ * 当前框架已经在身份认证拦截器中做了跨域处理
  */
 public class TransdomainFilter implements Filter {
     @Override
