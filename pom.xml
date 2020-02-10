@@ -14,6 +14,7 @@
         <spring-boot.version>2.2.0.RELEASE</spring-boot.version>
         <shiro.version>1.4.1</shiro.version>
         <log.version>1.2.3</log.version>
+        <guava.version>28.0-jre</guava.version>
         <qcz-redis.version>1.0.0</qcz-redis.version>
     </properties>
 
@@ -38,9 +39,14 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
+        <dependency>    <!-- shiro业务，基本上此包即可 -->
             <groupId>org.apache.shiro</groupId>
             <artifactId>shiro-spring</artifactId>
+            <version>${shiro.version}</version>
+        </dependency>
+        <dependency>    <!-- shiro内核，像一些不经常使用的基础包中没有 -->
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-core</artifactId>
             <version>${shiro.version}</version>
         </dependency>
 
@@ -56,6 +62,12 @@
             <artifactId>logback-classic</artifactId>
             <version>${log.version}</version>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
         </dependency>
 
         <dependency>

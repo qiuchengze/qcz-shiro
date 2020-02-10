@@ -510,12 +510,10 @@ public class ShiroFactory {
 
     /**
      * Shiro异常捕获跳转
-     * 【 如果采用Spring默认异常处理，则可以忽略 】
+     * 【 简单配置，如果采用Spring默认异常处理，则可以忽略 】
      * @return
      */
     public SimpleMappingExceptionResolver simpleMappingExceptionResolver() {
-        SimpleMappingExceptionResolver simpleMappingExceptionResolver = new SimpleMappingExceptionResolver();
-
         Properties properties = new Properties();
         properties.setProperty(
                 AuthenticationException.class.getName(),
@@ -525,7 +523,20 @@ public class ShiroFactory {
                 AuthorizationException.class.getName(),
                 ShiroConstant.SHIRO_CONFIG_UNAUTHORIZED$URL);  // 授权异常跳转
 
-        simpleMappingExceptionResolver.setExceptionMappings(properties);
+        return simpleMappingExceptionResolver(properties);
+    }
+
+    /**
+     * Shiro异常捕获跳转
+     * 【 自定义Shiro异常类及跳转配置，如果采用Spring默认异常处理，则可以忽略。如果采用内部实现的异常，则传值null 】
+     * @param properties
+     * @return
+     */
+    public SimpleMappingExceptionResolver simpleMappingExceptionResolver(Properties properties) {
+        SimpleMappingExceptionResolver simpleMappingExceptionResolver = new SimpleMappingExceptionResolver();
+
+        if (null != properties)
+            simpleMappingExceptionResolver.setExceptionMappings(properties);
 
         return simpleMappingExceptionResolver;
     }
