@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
@@ -25,6 +26,7 @@ import java.util.Date;
  */
 public abstract class BaseExceptionHandler extends ResponseEntityExceptionHandler {
     protected static final Logger LOGGER = LoggerFactory.getLogger(BaseExceptionHandler.class);
+    protected static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
     protected static final String DEFAULT_ERROR_MESSAGE = "系统忙，请稍后再试";
     protected static final String DEFAULT_ERROR_VIEW$NAME = "401";
 
@@ -45,11 +47,18 @@ public abstract class BaseExceptionHandler extends ResponseEntityExceptionHandle
         String errorMsg = e instanceof CustomException ? e.getMessage() : exceptionMessage(e);
         String errorStack = Throwables.getStackTraceAsString(e);
 
+        ExceptionResponse er = new ExceptionResponse();
+        er.setCode(status.value());
+        er.setUrl(request.getRequestURL().toString());
+        er.setMessage(errorMsg);
+        er.setStack(errorStack);
+        er.setTimestamp(DATE_FORMAT.format(new Date()));
+
         LOGGER.error("Request: {} raised {}", request.getRequestURI(), errorStack);
         if (isAjax(request))
-            return handleAjaxError(response, errorMsg, status);
+            return handleAjaxError(response, er);
 
-        return handleViewError(request.getRequestURL().toString(), errorStack, errorMsg, viewName);
+        return handleViewError(er, viewName);
     }
 
     protected String exceptionMessage(Exception e) {
@@ -68,29 +77,30 @@ public abstract class BaseExceptionHandler extends ResponseEntityExceptionHandle
         else if (e instanceof LockedAccountException)
             return "账号被锁定";
         else if (e instanceof AuthenticationException)
-            return "身份认证失败";
+            return "尚未登录或身份认证失败";
         else if (e instanceof UnauthorizedException)
             return "访问权限不足";
+        else if (e instanceof RuntimeException)
+            return "系统内部运行时发意外情况，请稍候再试";
+        else if (e instanceof Exception)
+            return "系统内部发生未知情况，请稍候再试";
         else
             return DEFAULT_ERROR_MESSAGE;
     }
 
-    protected ModelAndView handleViewError(String url, String errorStack, String errorMessage, String viewName) {
+    protected ModelAndView handleViewError(ExceptionResponse er, String viewName) {
         ModelAndView mav = new ModelAndView();
-        mav.addObject("exception", errorStack);
-        mav.addObject("url", url);
-        mav.addObject("message", errorMessage);
-        mav.addObject("timestamp", new Date());
+        mav.addObject("exceptionResponse", er);
         mav.setViewName(viewName);
 
         return mav;
     }
 
-    protected ModelAndView handleAjaxError(HttpServletResponse response, String errorMessage, HttpStatus status) throws IOException {
+    protected ModelAndView handleAjaxError(HttpServletResponse response, ExceptionResponse er) throws IOException {
         response.setCharacterEncoding("UTF-8");
-        response.setStatus(status.value());
+        response.setStatus(er.getCode());
         PrintWriter writer = response.getWriter();
-        writer.write(errorMessage);
+        writer.write(er.getMessage());
         writer.flush();
 
         return null;

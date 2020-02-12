@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
  * @web: http://www.fast-im.com/
  * @create: 2020 - 02 - 10
  */
+
 public class CustomException extends RuntimeException {
     private int code;
     public CustomException(String message) {
