@@ -54,7 +54,7 @@ public class ShiroConfigDemo extends AbstractShiroConfig {
 
     @Bean
     protected DefaultWebSessionManager sessionManager(ShiroFactory shiroFactory) {
-        return shiroFactory.createSessionManager();
+        return shiroFactory.createRedisWebSessionManager();
     }
 
     @Bean

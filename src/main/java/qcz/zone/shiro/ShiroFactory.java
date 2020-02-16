@@ -4,6 +4,7 @@ import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
 import org.apache.shiro.authz.AuthorizationException;
+import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.apache.shiro.cache.ehcache.EhCacheManager;
 import org.apache.shiro.codec.Base64;
@@ -116,8 +117,10 @@ public class ShiroFactory {
             this.shiroProperties = shiroProperties;
         }
 
-        if (null != redisProperties)
+        if (null != redisProperties) {
             this.redisProperties = redisProperties;
+            this.defaultRedisManager = createRedisManager();
+        }
 
         if (null == loginStrategy) {
             throw new RuntimeException("loginStrategy is null");
@@ -126,7 +129,6 @@ public class ShiroFactory {
         }
 
         ShiroConstant.init(shiroProperties);
-        this.defaultRedisManager = createRedisManager();
     }
 
     /**
@@ -179,8 +181,7 @@ public class ShiroFactory {
             @NotNull ShiroRealm shiroRealm,
             @NotNull DefaultWebSessionManager sessionManager
     ) {
-        RedisCacheManager redisCacheManager = this.createRedisCacheManager();
-        return createSecurityManager(shiroRealm, sessionManager, redisCacheManager, null);
+        return createSecurityManager(shiroRealm, sessionManager, createRedisCacheManager(), null);
     }
 
     /**
@@ -240,14 +241,14 @@ public class ShiroFactory {
      * 【 2. 使用自定义记住我功能 或 不使用记住我功能（不使用传null） 】
      * @param shiroRealm
      * @param sessionManager
-     * @param redisCacheManager
+     * @param cacheManager
      * @param rememberMeManager
      * @return
      */
     public DefaultWebSecurityManager createSecurityManager(
             @NotNull ShiroRealm shiroRealm,
             @NotNull DefaultWebSessionManager sessionManager,
-            RedisCacheManager redisCacheManager,
+            CacheManager cacheManager,
             RememberMeManager rememberMeManager
     ) {
         if (null == shiroRealm)
@@ -260,8 +261,8 @@ public class ShiroFactory {
         defaultWebSecurityManager.setRealm(shiroRealm);
         defaultWebSecurityManager.setSessionManager(sessionManager);
 
-        if (null != redisCacheManager)
-            defaultWebSecurityManager.setCacheManager(redisCacheManager);
+        if (null != cacheManager)
+            defaultWebSecurityManager.setCacheManager(cacheManager);
 
         if (null != rememberMeManager)
             defaultWebSecurityManager.setRememberMeManager(rememberMeManager);
@@ -300,22 +301,22 @@ public class ShiroFactory {
     }
 
     /**
-     * Session管理器（会话管理器）
-     * 【 使用内部提供的Redis会话管理器 】
+     * Web会话管理器
+     * 【 使用Redis 】
      * @return
      */
-    public DefaultWebSessionManager createSessionManager() {
-        RedisSessionDAO redisSessionDAO = createRedisSessionDAO();
-        return createSessionManager(redisSessionDAO);
+    public DefaultWebSessionManager createRedisWebSessionManager() {
+        return createDefaultWebSessionManager(createRedisSessionDAO());
     }
 
     /**
-     * 默认Web会话管理器（默认Web类型会话管理器）
-     * 【 使用本地内存SessionDAO，如果不需要使用，则传值null 】
+     * Web会话管理器
+     * 【 使用本地内存 】
      * @return
      */
-    public DefaultWebSessionManager createMemorySessionManager() {
-        return createSessionManager(new DefaultWebSessionManager(), createSessionDAO());
+    public DefaultWebSessionManager createMemoryWebSessionManager() {
+        DefaultWebSessionManager webSessionManager = createDefaultWebSessionManager();
+        return createDefaultWebSessionManager(webSessionManager, createMemorySessionDAO());
     }
 
     /**
@@ -335,7 +336,7 @@ public class ShiroFactory {
      * @return
      */
     public DefaultWebSessionManager createStatelessSessionManager(RedisSessionDAO redisSessionDAO) {
-        return createSessionManager(new StatelessWebSessionManager(), redisSessionDAO);
+        return createDefaultWebSessionManager(new StatelessWebSessionManager(), redisSessionDAO);
     }
 
     /**
@@ -344,8 +345,39 @@ public class ShiroFactory {
      * @param redisSessionDAO
      * @return
      */
-    public DefaultWebSessionManager createSessionManager(RedisSessionDAO redisSessionDAO) {
-        return createSessionManager(new DefaultWebSessionManager(), redisSessionDAO);
+    public DefaultWebSessionManager createDefaultWebSessionManager(RedisSessionDAO redisSessionDAO) {
+        DefaultWebSessionManager webSessionManager = createDefaultWebSessionManager();
+
+        return createDefaultWebSessionManager(webSessionManager, redisSessionDAO);
+    }
+
+    /**
+     * 默认Web会话管理器
+     * @return
+     */
+    private DefaultWebSessionManager createDefaultWebSessionManager() {
+        DefaultWebSessionManager webSessionManager = new DefaultWebSessionManager();
+        // 缓存超时时间
+        webSessionManager.setGlobalSessionTimeout(ShiroConstant.SHIRO_CONFIG_SESSION$TIMEOUT);
+        // 定时清理失效会话, 清理用户直接关闭浏览器造成的孤立会话
+        // 缓存清理间隔时间
+        webSessionManager.setSessionValidationInterval(ShiroConstant.SHIRO_CONFIG_SESSION$TIMEOUT);
+        // 允许删除无效的会话
+        webSessionManager.setDeleteInvalidSessions(true);
+        // 开启周期清理
+        webSessionManager.setSessionValidationSchedulerEnabled(true);
+
+        /**
+         * 是否将SessionId写入Cookie
+         * true==>写入：有状态环境（如：PC浏览器Web环境），此环境如果非true，则无法记录登录状态。
+         * false==>不写入：无状态环境，如：APP）
+         * 【 双模式，增加业务判断进行自适应动态设置 】
+         */
+        webSessionManager.setSessionIdCookieEnabled(true);
+//        sessionManager.setSessionIdCookie(sessionIdCookie);    // 注入cookie
+        webSessionManager.setSessionIdUrlRewritingEnabled(false);  // 去掉shiro登录时url里的JSESSIONID
+
+        return webSessionManager;
     }
 
     /**
@@ -355,29 +387,9 @@ public class ShiroFactory {
      * @param sessionDAO
      * @return
      */
-    public DefaultWebSessionManager createSessionManager(DefaultWebSessionManager sessionManager, SessionDAO sessionDAO){
+    public DefaultWebSessionManager createDefaultWebSessionManager(DefaultWebSessionManager sessionManager, SessionDAO sessionDAO){
         if (null == sessionManager)
             throw new RuntimeException("sessionManager is null");
-
-        // 缓存超时时间
-        sessionManager.setGlobalSessionTimeout(ShiroConstant.SHIRO_CONFIG_SESSION$TIMEOUT);
-        // 定时清理失效会话, 清理用户直接关闭浏览器造成的孤立会话
-        // 缓存清理间隔时间
-        sessionManager.setSessionValidationInterval(ShiroConstant.SHIRO_CONFIG_SESSION$TIMEOUT);
-        // 允许删除无效的会话
-        sessionManager.setDeleteInvalidSessions(true);
-        // 开启周期清理
-        sessionManager.setSessionValidationSchedulerEnabled(true);
-
-        /**
-         * 是否将SessionId写入Cookie
-         * true==>写入：有状态环境（如：PC浏览器Web环境），此环境如果非true，则无法记录登录状态。
-         * false==>不写入：无状态环境，如：APP）
-         * 【 双模式，增加业务判断进行自适应动态设置 】
-         */
-        sessionManager.setSessionIdCookieEnabled(true);
-//        sessionManager.setSessionIdCookie(sessionIdCookie);    // 注入cookie
-        sessionManager.setSessionIdUrlRewritingEnabled(false);  // 去掉shiro登录时url里的JSESSIONID
 
         // 注入自定义Session持久化器
         if (null != sessionDAO)
@@ -429,10 +441,10 @@ public class ShiroFactory {
     /**
      * 本地内存缓存
      * shiro自带的MemoryConstrainedCacheManager作缓存
-     * 只能用于本机，集群时无法使用，需要使用结合ehcache
+     * 只能用于本机，集群时无法使用
      * @return
      */
-    private MemoryConstrainedCacheManager createMemoryCcacheManager() {
+    public MemoryConstrainedCacheManager createMemoryCcacheManager() {
         MemoryConstrainedCacheManager cacheManager=new MemoryConstrainedCacheManager(); //使用内存缓存
 
         return cacheManager;
@@ -443,10 +455,7 @@ public class ShiroFactory {
      * @return
      */
     public EhCacheManager createEhCacheManager() {
-        EhCacheManager ehCacheManager = new EhCacheManager();
-        ehCacheManager.setCacheManagerConfigFile("classpath:ehcache/ehcache-shiro.xml");
-
-        return ehCacheManager;
+        return new EhCacheManager();
     }
 
     /**
@@ -492,7 +501,7 @@ public class ShiroFactory {
      * 【配合EhCache缓存管理器，便于单机环境使用】
      * @return
      */
-    public SessionDAO createSessionDAO() {
+    public MemorySessionDAO createMemorySessionDAO() {
         return new MemorySessionDAO();
     }
     /**

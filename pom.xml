@@ -54,20 +54,17 @@
             <groupId>org.apache.shiro</groupId>
             <artifactId>shiro-ehcache</artifactId>
             <version>${shiro.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>    <!-- 使用EhCache -->
             <groupId>net.sf.ehcache</groupId>
             <artifactId>ehcache</artifactId>
             <version>${ehcache.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>    <!-- 使用SpringBoot的缓存注解框架和注解 -->
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
             <version>${spring-boot.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- log -->
@@ -75,13 +72,11 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
             <version>${log.version}</version>
-            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>${log.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -94,7 +89,6 @@
             <groupId>qcz.zone</groupId>
             <artifactId>qcz-redis</artifactId>
             <version>${qcz-redis.version}</version>
-            <scope>provided</scope>
         </dependency>
     </dependencies>
 

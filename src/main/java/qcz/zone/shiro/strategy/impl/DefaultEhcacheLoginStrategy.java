@@ -2,6 +2,7 @@ package qcz.zone.shiro.strategy.impl;
 
 import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.UnknownAccountException;
+import org.springframework.beans.factory.annotation.Autowired;
 import qcz.zone.shiro.config.ShiroConstant;
 import qcz.zone.shiro.entity.ShiroUser;
 import qcz.zone.shiro.lock.impl.EhCacheShiroLock;
@@ -19,7 +20,7 @@ public class DefaultEhcacheLoginStrategy implements AbstractLoginStrategy {
     private EhCacheShiroLock ehCacheShiroLock = null;
 
     public DefaultEhcacheLoginStrategy() {
-        this.ehCacheShiroLock = new EhCacheShiroLock();
+        ehCacheShiroLock = new EhCacheShiroLock();
     }
 
     @Override
