@@ -4,7 +4,7 @@ import org.apache.shiro.authc.DisabledAccountException;
 import org.apache.shiro.authc.UnknownAccountException;
 import qcz.zone.shiro.config.ShiroConstant;
 import qcz.zone.shiro.entity.ShiroUser;
-import qcz.zone.shiro.redis.RedisShiroLock;
+import qcz.zone.shiro.lock.impl.RedisShiroLock;
 import qcz.zone.shiro.strategy.AbstractLoginStrategy;
 
 /**
@@ -14,10 +14,10 @@ import qcz.zone.shiro.strategy.AbstractLoginStrategy;
  * @create: 2020 - 02 - 02
  */
 
-public class DefaultLoginStrategy implements AbstractLoginStrategy {
+public class DefaultRedisLoginStrategy implements AbstractLoginStrategy {
     private RedisShiroLock redisShiroLock = null;
 
-    public DefaultLoginStrategy(RedisShiroLock redisShiroLock) {
+    public DefaultRedisLoginStrategy(RedisShiroLock redisShiroLock) {
         if (null == redisShiroLock)
             throw new RuntimeException("redisShiroLock is null");
 
@@ -51,7 +51,7 @@ public class DefaultLoginStrategy implements AbstractLoginStrategy {
 //            throw new DisabledAccountException("帐号已被锁或禁用！");
 
         // 登录成功，清除计数器
-        redisShiroLock.clearCounter(principal);
+        redisShiroLock.delCounter(principal);
 
         return true;
     }

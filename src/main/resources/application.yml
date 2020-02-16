@@ -11,6 +11,10 @@ spring:
     lock-account-time: 60    # 锁定帐户时长(单位：分钟)
     expire-in: 1800            # shiro redis缓存时长（单位：秒）
     debug-log: true     # 是否打印debug日志，true==》打印，false==》不打印
+  cache:
+    type: ehcache
+    ehcache:
+      config: classpath:ehcache/ehcache-shiro.xml
   redis:
     host: 127.0.0.1
     lettuce:

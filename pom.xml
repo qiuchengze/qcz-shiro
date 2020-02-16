@@ -16,6 +16,7 @@
         <log.version>1.2.3</log.version>
         <guava.version>28.0-jre</guava.version>
         <qcz-redis.version>1.0.0</qcz-redis.version>
+        <ehcache.version>2.10.6</ehcache.version>
     </properties>
 
     <dependencies>
@@ -48,6 +49,25 @@
             <groupId>org.apache.shiro</groupId>
             <artifactId>shiro-core</artifactId>
             <version>${shiro.version}</version>
+        </dependency>
+        <dependency>    <!-- shiro EhCache缓存组件 -->
+            <groupId>org.apache.shiro</groupId>
+            <artifactId>shiro-ehcache</artifactId>
+            <version>${shiro.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>    <!-- 使用EhCache -->
+            <groupId>net.sf.ehcache</groupId>
+            <artifactId>ehcache</artifactId>
+            <version>${ehcache.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>    <!-- 使用SpringBoot的缓存注解框架和注解 -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+            <version>${spring-boot.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- log -->
