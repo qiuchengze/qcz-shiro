@@ -29,14 +29,15 @@ public class ShiroConstant {
     public static final Boolean SHIRO_ACCOUNT_LOCK = true;  // 账户已被锁定
     public static final Boolean SHIRO_ACCOUNT_UNLOCK = false; // 账户未锁定
 
-    public static Long SHIRO_REDIS_EXPIRE$IN = 1800L;           // redis缓存时长（单位：秒）
-    public static final TimeUnit SHIRO_REDIS_DEFAULT_TIME$UNIT = TimeUnit.SECONDS;    // shiro默认计时单位（秒）
+    public static Long SHIRO_CACHE_EXPIRE$IN = 1800L;           // shiro缓存时长（单位：秒）
+    public static final TimeUnit SHIRO_CACHE_DEFAULT_TIME$UNIT = TimeUnit.SECONDS;    // shiro缓存默认计时单位（秒）
 
     // SHIRO Redis key prefix
     public static String SHIRO_REDIS_KEY$PREFIX_LOGIN$COUNTER = "Shiro-login.counter:";   // 登录次数计数器
     public static String SHIRO_REDIS_KEY$PREFIX_ACCOUNT$IS$LOCK = "Shiro-account.lock:";  // 账户是否被锁
     public static String SHIRO_REDIS_KEY$PREFIX_SESSION = "shiro-redis.session:";     // session redis缓存
     public static String SHIRO_REDIS_KEY$PREFIX_CACHE = "shiro-redis.cache:";         // cache redis缓存
+    public static String SHIRO_EHCACHE_KEY$PREFIX_CACHE = "shiro-eh.cache:";          // cache ehCache缓存
 
     public static void init(ShiroProperties shiroProperties) {
         if (null == shiroProperties)
@@ -61,7 +62,7 @@ public class ShiroConstant {
         if (null != shiroProperties.getLockAccountTime() && shiroProperties.getLockAccountTime() > 0)
             SHIRO_LOCK_ACCOUNT_TIME = shiroProperties.getLockAccountTime();
         if (null != shiroProperties.getExpireIn() && shiroProperties.getExpireIn() > 0)
-            SHIRO_REDIS_EXPIRE$IN = shiroProperties.getExpireIn();
+            SHIRO_CACHE_EXPIRE$IN = shiroProperties.getExpireIn();
 
         if (null != shiroProperties.getDebugLog())
             DEBUG_LOG = shiroProperties.getDebugLog();

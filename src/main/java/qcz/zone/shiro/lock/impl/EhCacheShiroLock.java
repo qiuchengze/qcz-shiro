@@ -1,9 +1,17 @@
 package qcz.zone.shiro.lock.impl;
 
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
+import org.apache.shiro.cache.Cache;
+import org.apache.shiro.cache.CacheManager;
+import org.apache.shiro.cache.ehcache.EhCache;
+import org.apache.shiro.cache.ehcache.EhCacheManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import qcz.zone.shiro.config.AbstractShiroConfig;
 import qcz.zone.shiro.lock.ShiroLock;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author: qiuchengze
@@ -13,83 +21,84 @@ import qcz.zone.shiro.lock.ShiroLock;
  */
 
 public class EhCacheShiroLock<K> extends ShiroLock<K> {
-    private static final String CACHE_NAME = "";
+    private CacheManager cacheManager = null;
+    private Cache<Object, Object> ehCache = null;
 
-    @Cacheable(value = CACHE_NAME, key = "#getCounterKey(#k)", condition = "null != #k", unless = "null == #result")
-    public Integer getCounter(K k) {
-        return 0;
+    public EhCacheShiroLock(CacheManager cacheManager) {
+        if (null == cacheManager)
+            throw new RuntimeException("【EhCacheShiroLock】 CacheManager is null");
+
+        this.cacheManager = cacheManager;
+
+        ehCache = cacheManager.getCache("lockCache");
     }
 
-    @CachePut(value = CACHE_NAME, key = "#getCounterKey(#k)", condition = "null != #k", unless = "null == #result")
-    public Integer addCounter(K k, Integer v) {
-        if (null == v)
-            v = 0;
-
-        return v;
-    }
-
-    @CacheEvict(value = CACHE_NAME, key = "#getCounterKey(#k)", condition = "null != #k")
-    public void delCounter(K k) {
-    }
-
-    @Cacheable(value = CACHE_NAME, key = "#getLockKey(#k)", condition = "null != #k", unless = "null == #result")
-    public Integer getLock(K k) {
-        return 0;
-    }
-
-    @Cacheable(value = CACHE_NAME, key = "#getLockKey(#k)", condition = "null != #k", unless = "null == #result")
-    public Integer addLock(K k) {
-        return 1;
-    }
-
-    @CacheEvict(value = CACHE_NAME, key = "#getLockKey(#k)", condition = "null != #k")
     public void delLock(K k) {
+        if (null == k)
+            return;
+
+        ehCache.remove(getLockKey(k));
     }
 
     @Override
     public boolean hasCounter(K k) {
-        if (null == getCounter(k) || 0 <= getCounter(k))
+        if (null == k)
             return false;
 
-        return true;
+        return (null == ehCache.get(getCounterKey(k)) ? false : true);
     }
 
     @Override
     public boolean hasLock(K k) {
-        if (null == getLock(k) || 0 <= getLock(k))
+        if (null == k)
             return false;
 
-        return true;
+        return (null == ehCache.get(getLockKey(k)) ? false : true);
     }
 
     @Override
     public void incrCounter(K k) {
-        Integer counter = getCounter(k);
-        if (null == counter)
-            counter = 0;
+        if (null == k)
+            return;
 
-        counter ++;
-
-        addCounter(k, counter);
+        Integer count = (null == ehCache.get(getCounterKey(k)) ? 0 : (Integer) ehCache.get(getCounterKey(k)) + 1);
 
         // 如果登录失败次数达到限定次数，则锁定账户一定时间
-        if (isLimitReached(counter)) {
+        if (isLimitReached(count)) {
             setLock(k);        // 锁定
             delCounter(k);   // 清空计数器
+        } else {
+            ehCache.put(getCounterKey(k), count);
         }
     }
 
     @Override
+    public void delCounter(K k) {
+        if (null == k)
+            return;
+
+        ehCache.remove(getCounterKey(k));
+    }
+
+    @Override
     public boolean isLock(K k) {
-        Integer lock = getLock(k);
-        if (null == lock || 0 <= lock)
+        if (null == k)
             return false;
 
-        return true;
+        if (hasLock(k)) {
+            Integer lock = (Integer) ehCache.get(getLockKey(k));
+            if (null != lock && lock > 0)
+                return true;
+        }
+
+        return false;
     }
 
     @Override
     public void setLock(K k) {
-        addLock(k);
+        if (null == k)
+            return;
+
+        ehCache.put(getLockKey(k), 1);
     }
 }

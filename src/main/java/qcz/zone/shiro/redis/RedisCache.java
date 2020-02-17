@@ -19,7 +19,7 @@ import java.util.*;
 public class RedisCache<K, V> implements Cache<K, V> {
     private RedisManager redisManager = null;
     private String prefix = ShiroConstant.SHIRO_REDIS_KEY$PREFIX_CACHE;
-    private Long ttl = ShiroConstant.SHIRO_REDIS_EXPIRE$IN;
+    private Long ttl = ShiroConstant.SHIRO_CACHE_EXPIRE$IN;
 
     public RedisCache(RedisManager redisManager) {
         this(redisManager, null, null);

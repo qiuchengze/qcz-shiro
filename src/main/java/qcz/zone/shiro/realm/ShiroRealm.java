@@ -33,9 +33,9 @@ public class ShiroRealm extends AuthorizingRealm {
     private AbstractLoginStrategy loginStrategy = null;
 
     public ShiroRealm(ShiroService shiroService, AbstractLoginStrategy loginStrategy) {
-        if (null == shiroService || null == loginStrategy) {
-            LOGGER.error(LogUtil.create("init ShiroRealm", "shiroService or loginStrategy is null"));
-            throw new RuntimeException("shiroService or loginStrategy is null");
+        if (null == shiroService) {
+            LOGGER.error(LogUtil.create("init ShiroRealm", "shiroService is null"));
+            throw new RuntimeException("shiroService is null");
         }
 
         this.shiroService = shiroService;
@@ -102,12 +102,21 @@ public class ShiroRealm extends AuthorizingRealm {
             return null;
 
         ShiroUser user = shiroService.getAbstractUser(principal, DesUtil.hashSaltMd5(password, principal));
-        if (null == user.getPrincipal())
-            user.setPrincipal(principal);
 
-        ShiroUser shiroUser = new ShiroUser(user.getPrincipal(), user.getPassword());
+        ShiroUser shiroUser = null;
+        if (null != user) {
+            if (null == user.getPrincipal())
+                user.setPrincipal(principal);
 
-        boolean isAllowed = loginStrategy.isAllowed(shiroUser);  // 用户登录检验限制策略
+            shiroUser = new ShiroUser(user.getPrincipal(), user.getPassword());
+        }
+
+        boolean isAllowed = false;
+        if (null != loginStrategy) {
+            isAllowed = loginStrategy.isAllowed(shiroUser);  // 用户登录检验限制策略
+        } else {
+            isAllowed = (null == shiroUser ? false : true);
+        }
 
         if (!isAllowed)
             throw new AuthenticationException("身份认证未通过");

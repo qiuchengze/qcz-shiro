@@ -19,7 +19,7 @@ public class DefaultRedisLoginStrategy implements AbstractLoginStrategy {
 
     public DefaultRedisLoginStrategy(RedisShiroLock redisShiroLock) {
         if (null == redisShiroLock)
-            throw new RuntimeException("redisShiroLock is null");
+            throw new RuntimeException("【DefaultRedisLoginStrategy】 RedisShiroLock is null");
 
         this.redisShiroLock = redisShiroLock;
     }
@@ -27,7 +27,7 @@ public class DefaultRedisLoginStrategy implements AbstractLoginStrategy {
     @Override
     public boolean isAllowed(ShiroUser shiroUser) {
         if (null == shiroUser)
-            throw new RuntimeException("user is null");
+            throw new UnknownAccountException("账号不存在！");
 
         String principal = String.valueOf(shiroUser.getPrincipal());
         if (null == principal)
@@ -44,9 +44,6 @@ public class DefaultRedisLoginStrategy implements AbstractLoginStrategy {
 
         // 访问一次，登录次数计数器加1
         redisShiroLock.incrCounter(principal);
-
-        if (null == shiroUser)
-            throw new UnknownAccountException("帐号或密码不正确！");
 //        if (UserStatusEM.NORMAL.getValue() != user.getStatus())
 //            throw new DisabledAccountException("帐号已被锁或禁用！");
 

@@ -1,13 +1,15 @@
 package qcz.zone.shiro.config;
 
+import org.apache.shiro.cache.CacheManager;
+import org.apache.shiro.cache.ehcache.EhCacheManager;
 import org.apache.shiro.mgt.RememberMeManager;
-
+import org.apache.shiro.mgt.SecurityManager;
+import org.apache.shiro.realm.Realm;
+import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
-import org.apache.shiro.web.mgt.CookieRememberMeManager;
-import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
-import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
-import qcz.zone.shiro.ShiroFactory;
-import qcz.zone.shiro.realm.ShiroRealm;
+import org.springframework.cache.ehcache.EhCacheManagerFactoryBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.io.ClassPathResource;
 
 /**
  * @author: qiuchengze
@@ -18,48 +20,28 @@ import qcz.zone.shiro.realm.ShiroRealm;
 public abstract class AbstractShiroConfig {
 
     /**
-     * 创建shiro工厂Bean
-     * @return
-     */
-    protected abstract ShiroFactory shiroFactory();
-
-    /**
      * Shiro拦截器及拦截策略
-     * @param shiroFactory  shiro工厂Bean
      * @param securityManager   Web类型安全管理器
      * @return
      */
-    protected abstract ShiroFilterFactoryBean shiroFilter(ShiroFactory shiroFactory, DefaultWebSecurityManager securityManager);
+    public abstract ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager);
 
     /**
      * Web类型安全管理器
-     * @param shiroFactory  shiro工厂Bean
      * @return
      */
-    protected abstract DefaultWebSecurityManager securityManager(ShiroFactory shiroFactory,
-                                                                 ShiroRealm shiroRealm,
-                                                                 DefaultWebSessionManager sessionManager,
-                                                                 RememberMeManager rememberMeManager);
+    public abstract SecurityManager securityManager(Realm realm, SessionManager sessionManager);
 
     /**
      * Shiro域（用户身份、角色、权限、认证凭证器匹配器等数据源）
-     * @param shiroFactory shiro工厂Bean
      * @return
      */
-    protected abstract ShiroRealm shiroRealm(ShiroFactory shiroFactory);
+    public abstract Realm realm();
 
     /**
      * Session管理器（会话管理器）
-     * @param shiroFactory  shiro工厂Bean
      * @return
      */
-    protected abstract DefaultWebSessionManager sessionManager(ShiroFactory shiroFactory);
+    public abstract SessionManager sessionManager();
 
-    /**
-     * Cookie管理器（记住我功能）
-     * 【 如果不需要，继承后直接返回null 】
-     * @param shiroFactory  shiro工厂Bean
-     * @return
-     */
-    protected abstract CookieRememberMeManager rememberMeManager(ShiroFactory shiroFactory);
 }

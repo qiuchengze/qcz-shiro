@@ -22,7 +22,7 @@ public class RedisCacheManager implements CacheManager {
     private RedisManager RedisManager = null;
     private final Map<String, Cache> mapCaches = new ConcurrentHashMap<String, Cache>();
     private String prefix = ShiroConstant.SHIRO_REDIS_KEY$PREFIX_CACHE;
-    private Long ttl = ShiroConstant.SHIRO_REDIS_EXPIRE$IN;
+    private Long ttl = ShiroConstant.SHIRO_CACHE_EXPIRE$IN;
 
     public RedisCacheManager(RedisManager redisManager) {
         this(redisManager, null,null);
