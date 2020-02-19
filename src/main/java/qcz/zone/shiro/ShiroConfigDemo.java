@@ -6,7 +6,6 @@ import org.apache.shiro.realm.Realm;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.cache.ehcache.EhCacheManagerFactoryBean;
 import org.springframework.context.annotation.Bean;
 import qcz.zone.shiro.config.AbstractShiroConfig;
@@ -22,7 +21,6 @@ import qcz.zone.shiro.service.ShiroService;
  */
 
 //@Configuration
-//@ConditionalOnClass(value = {ShiroService.class, ShiroProperties.class, RedisProperties.class})
 public class ShiroConfigDemo extends AbstractShiroConfig {
     @Autowired
     private ShiroService shiroService;
@@ -34,31 +32,26 @@ public class ShiroConfigDemo extends AbstractShiroConfig {
     private ShiroEhCacheFactory shiroFactory;
     
     @Bean(name = "shiroFactory")
-    @ConditionalOnBean(name = {"cacheManager"})
     public ShiroEhCacheFactory shiroEhCacheFactory(CacheManager cacheManager) {
         return new ShiroEhCacheFactory(shiroService, cacheManager, shiroProperties);
     }
 
     @Bean(name = "shiroFilter")
-    @ConditionalOnBean(name = {"shiroFactory", "securityManager"})
     public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager) {
         return shiroFactory.createShiroFilter(securityManager);
     }
 
     @Bean(name = "securityManager")
-    @ConditionalOnBean(name = {"shiroFactory", "sessionManager", "realm"})
     public SecurityManager securityManager(Realm realm, SessionManager sessionManager) {
         return shiroFactory.createEhCacheSecurityManager(realm, sessionManager);
     }
 
     @Bean(name = "realm")
-    @ConditionalOnBean(name = {"shiroFactory"})
     public Realm realm() {
         return shiroFactory.createEhCacheRealm();
     }
 
     @Bean(name = "sessionManager")
-    @ConditionalOnBean(name = {"shiroFactory"})
     public SessionManager sessionManager() {
         return shiroFactory.createEhCacheSessionManager();
     }
@@ -69,7 +62,6 @@ public class ShiroConfigDemo extends AbstractShiroConfig {
     }
 
     @Bean(name = "cacheManager")
-    @ConditionalOnBean(name = {"ehCacheManagerFactoryBean"})
     public CacheManager cacheManager(EhCacheManagerFactoryBean ehCacheManagerFactoryBean) {
         return ShiroEhCacheFactory.createEhCacheManager(ehCacheManagerFactoryBean);
     }
