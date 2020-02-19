@@ -1,18 +1,15 @@
-package qcz.zone.shiro;
+package qcz.zone.shiro.factory;
 
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.authc.credential.HashedCredentialsMatcher;
 import org.apache.shiro.authz.AuthorizationException;
 import org.apache.shiro.cache.CacheManager;
-import org.apache.shiro.cache.MemoryConstrainedCacheManager;
-import org.apache.shiro.cache.ehcache.EhCacheManager;
 import org.apache.shiro.codec.Base64;
 import org.apache.shiro.mgt.RememberMeManager;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.realm.Realm;
 import org.apache.shiro.session.mgt.SessionManager;
-import org.apache.shiro.session.mgt.eis.MemorySessionDAO;
 import org.apache.shiro.session.mgt.eis.SessionDAO;
 import org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
@@ -21,25 +18,18 @@ import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.apache.shiro.web.servlet.SimpleCookie;
 import org.apache.shiro.web.session.mgt.DefaultWebSessionManager;
 import org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
-import org.springframework.cache.ehcache.EhCacheManagerFactoryBean;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver;
 import qcz.zone.shiro.config.ShiroConstant;
 import qcz.zone.shiro.config.ShiroProperties;
 import qcz.zone.shiro.entity.ShiroUrlAccessStrategy;
-import qcz.zone.shiro.manager.*;
-import qcz.zone.shiro.redis.RedisSessionDAO;
 import qcz.zone.shiro.filter.ShiroAuthenticationFilter;
 import qcz.zone.shiro.filter.ShiroAuthorizationFilter;
+import qcz.zone.shiro.manager.ShiroSecurityManagerBiulder;
 import qcz.zone.shiro.realm.ShiroRealm;
-import qcz.zone.shiro.lock.impl.RedisShiroLock;
 import qcz.zone.shiro.service.ShiroService;
 import qcz.zone.shiro.strategy.AbstractLoginStrategy;
-import qcz.zone.shiro.strategy.impl.DefaultEhcacheLoginStrategy;
-import qcz.zone.shiro.strategy.impl.DefaultRedisLoginStrategy;
 
 import javax.servlet.Filter;
 import javax.validation.constraints.NotNull;
@@ -52,54 +42,31 @@ import java.util.Properties;
  * @author: qiuchengze
  * @email: eric.qjc@163.com
  * @web: http://www.fast-im.com/
- * @create: 2020 - 02 - 02
+ * @create: 2020 - 02 - 19
  */
 
-public class ShiroFactory {
-    private ShiroService shiroService = null;           // @Service，用于从数据库中获取用户数据
-    private ShiroProperties shiroProperties = null;     // Shiro属性配置
-    private RedisProperties redisProperties = null;     // Redis属性配置
-    private RedisManager defaultRedisManager = null;    // 默认Redis管理器
+/**
+ * Shiro构建工厂抽象类（目前主要实现两种模式：Redis和EhCache）
+ * 必需准备的依赖：
+ * 1. ShiroService      数据源服务（实现从数据库中取用户、角色、权限、过滤配置等数据）
+ *
+ * 辅助依赖：
+ * 1. ShiroProperties   Shiro的一些配置项，如配置文件中未设置相关属性或未载入容器，则使用内部默认配置（ShiroConstant）
+ */
+public abstract class AbstractShiroFactory {
+    private ShiroService shiroService = null;
 
     /**
-     * Shiro工厂Bean 构造方法
-     * 【 使用内部EhCache的用户登录策略方式 】
-     * @param shiroService
-     * @param shiroProperties
+     * shiro工厂
+     * 【 使用自定义shiro配置 】
+     * @param shiroService      必须
+     * @param shiroProperties   传值为null时，使用内部默认配置（ShiroConstant）
      */
-    public ShiroFactory(
-            ShiroService shiroService,
-            ShiroProperties shiroProperties) {
-        this(shiroService, shiroProperties, null);
-    }
+    public AbstractShiroFactory(@NotNull ShiroService shiroService, ShiroProperties shiroProperties) {
+        this.shiroService = shiroService;
 
-    /**
-     * Shiro工厂Bean 构造方法
-     * 【 使用自定义的用户登录策略方式 】
-     * @param shiroService
-     * @param shiroProperties
-     * @param redisProperties
-     */
-    public ShiroFactory(ShiroService shiroService, ShiroProperties shiroProperties, RedisProperties redisProperties) {
-
-        if (null == shiroService) {
-            throw new RuntimeException("shiroService is null");
-        } else {
-            this.shiroService = shiroService;
-        }
-
-        if (null == shiroProperties) {
-            throw new RuntimeException("shiroProperties is null");
-        } else {
-            this.shiroProperties = shiroProperties;
-        }
-
-        if (null != redisProperties) {
-            this.redisProperties = redisProperties;
-            this.defaultRedisManager = createRedisManager();
-        }
-
-        ShiroConstant.init(shiroProperties);
+        if (null != shiroProperties)
+            ShiroConstant.init(shiroProperties);
     }
 
     /** ======================================  FilterBean  ====================================== **/
@@ -108,10 +75,7 @@ public class ShiroFactory {
      * @param securityManager
      * @returns
      */
-    public ShiroFilterFactoryBean createShiroFilter(SecurityManager securityManager) {
-        if (null == securityManager)
-            throw new RuntimeException("securityManager is null");
-
+    public ShiroFilterFactoryBean createShiroFilter(@NotNull SecurityManager securityManager) {
         ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
 
         shiroFilterFactoryBean.setSecurityManager(securityManager);
@@ -180,16 +144,11 @@ public class ShiroFactory {
     /**
      * Shiro域（用户身份、角色、权限、认证凭证器匹配器等数据源）
      * 【 使用自定义的凭证匹配器 】
-     * @param credentialsMatcher
+     * @param credentialsMatcher    密码凭证匹配器
+     * @param loginStrategy         登录策略（是否限制登录次数、同一账户多地登录等）
      * @return
      */
     public Realm createRealm(@NotNull CredentialsMatcher credentialsMatcher, AbstractLoginStrategy loginStrategy) {
-        if (null == shiroService)
-            throw new RuntimeException("shiroService is null");
-
-        if (null == credentialsMatcher)
-            throw new RuntimeException("credentialsMatcher is null");
-
         ShiroRealm shiroRealm = new ShiroRealm(shiroService, loginStrategy);
         shiroRealm.setCredentialsMatcher(credentialsMatcher);
 
@@ -200,7 +159,7 @@ public class ShiroFactory {
      * 内部默认凭证匹配器
      * @return
      */
-    private HashedCredentialsMatcher createHashedCredentialsMatcher() {
+    public HashedCredentialsMatcher createHashedCredentialsMatcher() {
         return createHashedCredentialsMatcher(
                 ShiroConstant.SHIRO_CONFIG_HASH$ALGORITHM$NAME,     // MD5加密
                 ShiroConstant.SHIRO_CONFIG_HASH$ITERATIONS_1024);   // 加密迭代次数 1024次
@@ -224,16 +183,6 @@ public class ShiroFactory {
     }
 
     /** ======================================  SessionManager  ====================================== **/
-    /**
-     * 无状态Web会话管理器
-     * 【 如不使用SessionDAO来缓存会话，则SessionDAO传null 】
-     * @param sessionDAO
-     * @return
-     */
-    public DefaultWebSessionManager createStatelessSessionManager(SessionDAO sessionDAO) {
-        return createDefaultWebSessionManager(new StatelessWebSessionManager(), sessionDAO);
-    }
-
     /**
      * 默认Web会话管理器（默认Web类型会话管理器）
      * 【 如不使用SessionDAO来缓存会话，则SessionDAO传null 】
@@ -320,137 +269,6 @@ public class ShiroFactory {
         return simpleCookie;
     }
 
-    /** ======================================  CacheManager  ====================================== **/
-    /**
-     * 本地内存缓存
-     * shiro自带的MemoryConstrainedCacheManager作缓存
-     * 只能用于本机，集群时无法使用
-     * @return
-     */
-    public CacheManager createMemoryCcacheManager() {
-        MemoryConstrainedCacheManager cacheManager=new MemoryConstrainedCacheManager(); //使用内存缓存
-
-        return cacheManager;
-    }
-
-    /**
-     * EhCache缓存管理器工厂Bean
-     * 【 此工厂Bean必需使用动态代理形式才能正常读取xml配置文件并创建cacheManager，
-     * 因此需使用注解（@Configuration/@Bean、@Component等），交由Spring容器管理 】
-     * @return
-     */
-    public EhCacheManagerFactoryBean createEhCacheManagerFactoryBean(@NotNull  String xmlResourcePath) {
-        EhCacheManagerFactoryBean ehCacheManagerFactoryBean = new EhCacheManagerFactoryBean();
-        // xml默认设为resources目录下: ehcache.xml    (classpath:ehcache.xml) 无需classpath:
-        ehCacheManagerFactoryBean.setConfigLocation(new ClassPathResource(xmlResourcePath));
-        ehCacheManagerFactoryBean.setCacheManagerName("EhCacheManager");
-        ehCacheManagerFactoryBean.setShared(true);
-
-        return ehCacheManagerFactoryBean;
-    }
-
-    public EhCacheManagerFactoryBean createEhCacheManagerFactoryBean(@NotNull  String xmlResourcePath,
-                                                               String cacheManagerName,
-                                                               Boolean isShared) {
-        EhCacheManagerFactoryBean ehCacheManagerFactoryBean = new EhCacheManagerFactoryBean();
-        ehCacheManagerFactoryBean.setConfigLocation(new ClassPathResource(xmlResourcePath));
-
-        if (!StringUtils.isEmpty(cacheManagerName))
-            ehCacheManagerFactoryBean.setCacheManagerName(cacheManagerName);
-
-        if (null != isShared)
-            ehCacheManagerFactoryBean.setShared(isShared);
-
-        return ehCacheManagerFactoryBean;
-    }
-
-    /**
-     * EhCache缓存管理器
-     * 【配合MemorySessionDAO，便于单机环境使用】
-     * @return
-     */
-    public CacheManager createEhCacheManager(EhCacheManagerFactoryBean ehCacheManagerFactoryBean) {
-        EhCacheManager ehCacheManager = new EhCacheManager();
-        ehCacheManager.setCacheManager(ehCacheManagerFactoryBean.getObject());
-
-        return ehCacheManager;
-    }
-
-    /**
-     * CacheManager 缓存管理器
-     * 【 使用内部默认的Redis管理器 】
-     * @return
-     */
-    public CacheManager createRedisCacheManager() {
-        if (null == defaultRedisManager)
-            throw new RuntimeException("defaultRedisManager is null");
-
-        return createRedisCacheManager(defaultRedisManager);
-    }
-
-    /**
-     * CacheManager 缓存管理器
-     * 【 使用自定义的Redis管理器 】
-     * @param redisManager
-     * @return
-     */
-    public RedisCacheManager createRedisCacheManager(RedisManager redisManager) {
-        if (null == redisManager)
-            return null;
-
-        return new RedisCacheManager(redisManager,
-                ShiroConstant.SHIRO_REDIS_KEY$PREFIX_CACHE,
-                ShiroConstant.SHIRO_CACHE_EXPIRE$IN);
-    }
-
-    /**
-     * 内部默认Redis管理器
-     * @return
-     */
-    private RedisManager createRedisManager() {
-        if (null == redisProperties)
-            throw new RuntimeException("redisProperties is null");
-
-        return new RedisManager(redisProperties);
-    }
-
-    /** ======================================  SessionDAO  ====================================== **/
-    /**
-     * 会话 内存SessionDAO
-     * 【配合EhCache缓存管理器，便于单机环境使用】
-     * @return
-     */
-    public SessionDAO createMemorySessionDAO() {
-        return new MemorySessionDAO();
-    }
-    /**
-     * 会话RedisDAO
-     * 【 使用内部默认RedisManager 】
-     * @return
-     */
-    public SessionDAO createRedisSessionDAO() {
-        if (null == defaultRedisManager)
-            throw new RuntimeException("defaultRedisManager is null");
-
-        return createRedisSessionDAO(defaultRedisManager);
-    }
-
-    /**
-     * 会话RedisDAO
-     * 【 使用自定义的RedisManager 】
-     * @param redisManager
-     * @return
-     */
-    public SessionDAO createRedisSessionDAO(RedisManager redisManager) {
-        if (null == redisManager)
-            return null;
-
-        return new RedisSessionDAO(
-                redisManager,
-                ShiroConstant.SHIRO_REDIS_KEY$PREFIX_SESSION,
-                ShiroConstant.SHIRO_CACHE_EXPIRE$IN);
-    }
-
     /** ======================================  AOP  ====================================== **/
     /**
      * 开启cglib代理 （如@RequiresRoles,@RequiresPermissions）
@@ -513,5 +331,13 @@ public class ShiroFactory {
             simpleMappingExceptionResolver.setExceptionMappings(properties);
 
         return simpleMappingExceptionResolver;
+    }
+
+    public ShiroService getShiroService() {
+        return shiroService;
+    }
+
+    public void setShiroService(ShiroService shiroService) {
+        this.shiroService = shiroService;
     }
 }

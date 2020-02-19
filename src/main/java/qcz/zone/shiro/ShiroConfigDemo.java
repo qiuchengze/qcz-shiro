@@ -1,22 +1,18 @@
 package qcz.zone.shiro;
 
 import org.apache.shiro.cache.CacheManager;
-import org.apache.shiro.cache.ehcache.EhCacheManager;
-import org.apache.shiro.mgt.RememberMeManager;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.realm.Realm;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.cache.ehcache.EhCacheManagerFactoryBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.io.ClassPathResource;
 import qcz.zone.shiro.config.AbstractShiroConfig;
 import qcz.zone.shiro.config.ShiroProperties;
-import qcz.zone.shiro.realm.ShiroRealm;
+import qcz.zone.shiro.factory.impl.ShiroEhCacheFactory;
 import qcz.zone.shiro.service.ShiroService;
-import qcz.zone.shiro.strategy.impl.DefaultEhcacheLoginStrategy;
 
 /**
  * @author: qiuchengze
@@ -35,46 +31,46 @@ public class ShiroConfigDemo extends AbstractShiroConfig {
     private ShiroProperties shiroProperties;
 
     @Autowired
-    private RedisProperties redisProperties;
+    private ShiroEhCacheFactory shiroFactory;
+    
+    @Bean(name = "shiroFactory")
+    @ConditionalOnBean(name = {"cacheManager"})
+    public ShiroEhCacheFactory shiroEhCacheFactory(CacheManager cacheManager) {
+        return new ShiroEhCacheFactory(shiroService, cacheManager, shiroProperties);
+    }
 
-    @Autowired
-    private ShiroFactory shiroFactory;
-
-    @Autowired
-    private CacheManager cacheManager;
-
-    @Bean
+    @Bean(name = "shiroFilter")
+    @ConditionalOnBean(name = {"shiroFactory", "securityManager"})
     public ShiroFilterFactoryBean shiroFilter(SecurityManager securityManager) {
         return shiroFactory.createShiroFilter(securityManager);
     }
 
-    @Bean
+    @Bean(name = "securityManager")
+    @ConditionalOnBean(name = {"shiroFactory", "sessionManager", "realm"})
     public SecurityManager securityManager(Realm realm, SessionManager sessionManager) {
-        return shiroFactory.createDefaultWebSecurityManager(realm, sessionManager, null, null);
+        return shiroFactory.createEhCacheSecurityManager(realm, sessionManager);
     }
 
-    @Bean
+    @Bean(name = "realm")
+    @ConditionalOnBean(name = {"shiroFactory"})
     public Realm realm() {
-        return shiroFactory.createRealm(new DefaultEhcacheLoginStrategy(cacheManager));
+        return shiroFactory.createEhCacheRealm();
     }
 
-    @Bean
+    @Bean(name = "sessionManager")
+    @ConditionalOnBean(name = {"shiroFactory"})
     public SessionManager sessionManager() {
-        return shiroFactory.createDefaultWebSessionManager(shiroFactory.createRedisSessionDAO());
+        return shiroFactory.createEhCacheSessionManager();
     }
 
-    /**
-     * 缓存管理器
-     * 【 EhCacheManager缓存管理器 】
-     * @return
-     */
-    @Bean
+    @Bean(name = "ehCacheManagerFactoryBean")
     public EhCacheManagerFactoryBean ehCacheManagerFactoryBean() {
-        return shiroFactory.createEhCacheManagerFactoryBean("ehcache.xml");
+        return ShiroEhCacheFactory.createEhCacheManagerFactoryBean("ehcache.xml");
     }
 
-    @Bean
+    @Bean(name = "cacheManager")
+    @ConditionalOnBean(name = {"ehCacheManagerFactoryBean"})
     public CacheManager cacheManager(EhCacheManagerFactoryBean ehCacheManagerFactoryBean) {
-        return shiroFactory.createEhCacheManager(ehCacheManagerFactoryBean);
+        return ShiroEhCacheFactory.createEhCacheManager(ehCacheManagerFactoryBean);
     }
 }
