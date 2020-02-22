@@ -29,10 +29,13 @@ public class ShiroConfigDemo extends AbstractShiroConfig {
 
     @Autowired
     private ShiroEhCacheFactory shiroFactory;
+
+    @Autowired
+    private CacheManager cacheManager;
     
     @Bean(name = "shiroFactory")
     public ShiroEhCacheFactory shiroEhCacheFactory() {
-        return new ShiroEhCacheFactory(shiroService, "/ehcache/ehcache-shiro.xml", shiroProperties);
+        return new ShiroEhCacheFactory(shiroService, cacheManager, shiroProperties);
     }
 
     @Bean(name = "shiroFilter")

@@ -38,16 +38,16 @@ import java.net.URL;
 public class ShiroEhCacheFactory extends AbstractShiroFactory {
     private CacheManager cacheManager = null;
 
-    public ShiroEhCacheFactory(@NotNull ShiroService shiroService, @NotNull String ehcacheConfigurationResourceFilePath) {
-        this(shiroService, ehcacheConfigurationResourceFilePath, null);
+    public ShiroEhCacheFactory(@NotNull ShiroService shiroService, @NotNull CacheManager cacheManager) {
+        this(shiroService, cacheManager, null);
     }
 
     public ShiroEhCacheFactory(@NotNull ShiroService shiroService,
-                               @NotNull String ehcacheConfigurationResourceFilePath,
+                               @NotNull CacheManager cacheManager,
                                ShiroProperties shiroProperties) {
         super(shiroService, shiroProperties);
 
-        this.cacheManager = createCacheManager(ehcacheConfigurationResourceFilePath);
+        this.cacheManager = cacheManager;
     }
 
     /** ======================================  SecurityManager  ====================================== **/
@@ -83,25 +83,6 @@ public class ShiroEhCacheFactory extends AbstractShiroFactory {
     }
 
     /** ======================================  CacheManager  ====================================== **/
-    /**
-     * 创建Cache缓存管理器
-     * 【 可用于Shiro之外的需要使用EhCache缓存的业务使用 】
-     * 【 注意：配置文件放置在资源目录下，传入的classpath配置文件路径前需要添加'/'，如："/ehcache/ehcache-shiro.xml" 】
-     * @return
-     */
-    private CacheManager createCacheManager(String ehcacheConfigurationResourceFilePath) {
-        // ClassLoader前如果不加getClass().，则打包成jar被其它引用时无法获取到资源目录
-        // 建议采用getClass().getResource() 或 getClass().getClassLoader().getResource()
-//            URL url = ClassLoader.getSystemResource(ehcacheConfigurationResourceFilePath);
-        URL url = getClass().getResource(ehcacheConfigurationResourceFilePath);
-        net.sf.ehcache.CacheManager ehCacheManager = net.sf.ehcache.CacheManager.create(url);
-        ehCacheManager.setName("ShiroEhCacheManager");
-
-        EhCacheManager cacheManager = new EhCacheManager();
-        cacheManager.setCacheManager(ehCacheManager);
-        return cacheManager;
-    }
-
     /**
      * Cache缓存管理器
      * 【配合MemorySessionDAO，便于单机环境使用】
