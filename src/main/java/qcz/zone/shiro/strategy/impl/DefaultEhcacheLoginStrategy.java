@@ -6,7 +6,6 @@ import org.apache.shiro.cache.CacheManager;
 import qcz.zone.shiro.config.ShiroConstant;
 import qcz.zone.shiro.entity.ShiroUser;
 import qcz.zone.shiro.lock.impl.EhCacheShiroLock;
-import qcz.zone.shiro.lock.impl.MemoryShiroLock;
 import qcz.zone.shiro.strategy.AbstractLoginStrategy;
 
 /**

@@ -2,16 +2,9 @@ package qcz.zone.shiro.lock.impl;
 
 import org.apache.shiro.cache.Cache;
 import org.apache.shiro.cache.CacheManager;
-import org.apache.shiro.cache.ehcache.EhCache;
-import org.apache.shiro.cache.ehcache.EhCacheManager;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import qcz.zone.shiro.config.AbstractShiroConfig;
+import org.checkerframework.checker.units.qual.C;
+import qcz.zone.shiro.factory.impl.ShiroEhCacheFactory;
 import qcz.zone.shiro.lock.ShiroLock;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author: qiuchengze

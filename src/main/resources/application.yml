@@ -14,7 +14,7 @@ spring:
   cache:
     type: ehcache
     ehcache:
-      config: classpath:ehcache.xml
+      config: classpath:ehcache/ehcache-shiro.xml
   redis:
     host: 127.0.0.1
     lettuce:

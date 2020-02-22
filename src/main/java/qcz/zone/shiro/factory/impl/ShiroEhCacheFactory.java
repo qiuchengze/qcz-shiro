@@ -1,7 +1,7 @@
 package qcz.zone.shiro.factory.impl;
 
-import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.cache.CacheManager;
+import org.apache.shiro.authc.credential.CredentialsMatcher;
 import org.apache.shiro.cache.ehcache.EhCacheManager;
 import org.apache.shiro.mgt.RememberMeManager;
 import org.apache.shiro.mgt.SecurityManager;
@@ -11,13 +11,13 @@ import org.apache.shiro.session.mgt.eis.MemorySessionDAO;
 import org.apache.shiro.session.mgt.eis.SessionDAO;
 import org.springframework.cache.ehcache.EhCacheManagerFactoryBean;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.util.StringUtils;
 import qcz.zone.shiro.config.ShiroProperties;
 import qcz.zone.shiro.factory.AbstractShiroFactory;
 import qcz.zone.shiro.service.ShiroService;
 import qcz.zone.shiro.strategy.impl.DefaultEhcacheLoginStrategy;
 
 import javax.validation.constraints.NotNull;
+import java.net.URL;
 
 /**
  * @author: qiuchengze
@@ -30,46 +30,48 @@ import javax.validation.constraints.NotNull;
  * Shiro构建工厂实现类（模式：EhCache）
  * 必需准备的依赖：
  * 1. ShiroService      数据源服务（实现从数据库中取用户、角色、权限、过滤配置等数据）
+ * 2. EhCacheManager    EhCache缓存管理器（【 注意：传入的路径如在资源目录下，则classpath配置文件路径前需要添加'/'，如："/ehcache/ehcache-shiro.xml" 】）
  *
  * 辅助依赖：
  * 1. ShiroProperties   Shiro的一些配置项，如配置文件中未设置相关属性或未载入容器，则使用内部默认配置（ShiroConstant）
  */
 public class ShiroEhCacheFactory extends AbstractShiroFactory {
-    private CacheManager ehCacheManager = null;
+    private CacheManager cacheManager = null;
 
-    public ShiroEhCacheFactory(@NotNull ShiroService shiroService, @NotNull CacheManager ehCacheManager) {
-        this(shiroService, ehCacheManager, null);
+    public ShiroEhCacheFactory(@NotNull ShiroService shiroService, @NotNull String ehcacheConfigurationResourceFilePath) {
+        this(shiroService, ehcacheConfigurationResourceFilePath, null);
     }
 
     public ShiroEhCacheFactory(@NotNull ShiroService shiroService,
-                               @NotNull CacheManager ehCacheManager,
+                               @NotNull String ehcacheConfigurationResourceFilePath,
                                ShiroProperties shiroProperties) {
         super(shiroService, shiroProperties);
 
-        this.ehCacheManager = ehCacheManager;
+        this.cacheManager = createCacheManager(ehcacheConfigurationResourceFilePath);
     }
 
     /** ======================================  SecurityManager  ====================================== **/
     public SecurityManager createEhCacheSecurityManager(Realm realm, SessionManager sessionManager) {
-        return createDefaultWebSecurityManager(realm, sessionManager, ehCacheManager, null);
+        return createDefaultWebSecurityManager(realm, sessionManager, cacheManager, null);
     }
 
     public SecurityManager createEhCacheSecurityManager(Realm realm,
                                                       SessionManager sessionManager,
                                                       RememberMeManager rememberMeManager) {
-        return createDefaultWebSecurityManager(realm, sessionManager, ehCacheManager, rememberMeManager);
+        return createDefaultWebSecurityManager(realm, sessionManager, cacheManager, rememberMeManager);
     }
 
     /** ======================================  Realm  ====================================== **/
     public Realm createEhCacheRealm() {
         CredentialsMatcher credentialsMatcher = createHashedCredentialsMatcher();
-        DefaultEhcacheLoginStrategy ehCacheLoginStrategy = new DefaultEhcacheLoginStrategy(ehCacheManager);
+        DefaultEhcacheLoginStrategy ehCacheLoginStrategy =
+                new DefaultEhcacheLoginStrategy(cacheManager);
 
         return createRealm(credentialsMatcher, ehCacheLoginStrategy);
     }
 
     public Realm createEhCacheRealm(@NotNull CredentialsMatcher credentialsMatcher) {
-        DefaultEhcacheLoginStrategy ehCacheLoginStrategy = new DefaultEhcacheLoginStrategy(ehCacheManager);
+        DefaultEhcacheLoginStrategy ehCacheLoginStrategy = new DefaultEhcacheLoginStrategy(cacheManager);
 
         return createRealm(credentialsMatcher, ehCacheLoginStrategy);
     }
@@ -81,59 +83,32 @@ public class ShiroEhCacheFactory extends AbstractShiroFactory {
     }
 
     /** ======================================  CacheManager  ====================================== **/
-//    /**
-//     * 本地内存缓存
-//     * shiro自带的MemoryConstrainedCacheManager作缓存
-//     * 只能用于本机，集群时无法使用
-//     * @return
-//     */
-//    public CacheManager createMemoryCcacheManager() {
-//        MemoryConstrainedCacheManager cacheManager=new MemoryConstrainedCacheManager(); //使用内存缓存
-//
-//        return cacheManager;
-//    }
-
     /**
-     * EhCache缓存管理器工厂Bean
-     * 【 此工厂Bean必需使用动态代理形式才能正常读取xml配置文件并创建cacheManager，
-     * 因此需使用注解（@Configuration/@Bean、@Component等），交由Spring容器管理 】
+     * 创建Cache缓存管理器
+     * 【 可用于Shiro之外的需要使用EhCache缓存的业务使用 】
+     * 【 注意：配置文件放置在资源目录下，传入的classpath配置文件路径前需要添加'/'，如："/ehcache/ehcache-shiro.xml" 】
      * @return
      */
-    public static EhCacheManagerFactoryBean createEhCacheManagerFactoryBean(@NotNull  String xmlResourcePath) {
-        EhCacheManagerFactoryBean ehCacheManagerFactoryBean = new EhCacheManagerFactoryBean();
-        // xml默认设为resources目录下: ehcache.xml    (classpath:ehcache.xml) 无需classpath:
-        ehCacheManagerFactoryBean.setConfigLocation(new ClassPathResource(xmlResourcePath));
-        ehCacheManagerFactoryBean.setCacheManagerName("EhCacheManager");
-        ehCacheManagerFactoryBean.setShared(true);
+    private CacheManager createCacheManager(String ehcacheConfigurationResourceFilePath) {
+        // ClassLoader前如果不加getClass().，则打包成jar被其它引用时无法获取到资源目录
+        // 建议采用getClass().getResource() 或 getClass().getClassLoader().getResource()
+//            URL url = ClassLoader.getSystemResource(ehcacheConfigurationResourceFilePath);
+        URL url = getClass().getResource(ehcacheConfigurationResourceFilePath);
+        net.sf.ehcache.CacheManager ehCacheManager = net.sf.ehcache.CacheManager.create(url);
+        ehCacheManager.setName("ShiroEhCacheManager");
 
-        return ehCacheManagerFactoryBean;
-    }
-
-    public static EhCacheManagerFactoryBean createEhCacheManagerFactoryBean(@NotNull  String xmlResourcePath,
-                                                                     String cacheManagerName,
-                                                                     Boolean isShared) {
-        EhCacheManagerFactoryBean ehCacheManagerFactoryBean = new EhCacheManagerFactoryBean();
-        ehCacheManagerFactoryBean.setConfigLocation(new ClassPathResource(xmlResourcePath));
-
-        if (!StringUtils.isEmpty(cacheManagerName))
-            ehCacheManagerFactoryBean.setCacheManagerName(cacheManagerName);
-
-        if (null != isShared)
-            ehCacheManagerFactoryBean.setShared(isShared);
-
-        return ehCacheManagerFactoryBean;
+        EhCacheManager cacheManager = new EhCacheManager();
+        cacheManager.setCacheManager(ehCacheManager);
+        return cacheManager;
     }
 
     /**
-     * EhCache缓存管理器
+     * Cache缓存管理器
      * 【配合MemorySessionDAO，便于单机环境使用】
      * @return
      */
-    public static CacheManager createEhCacheManager(EhCacheManagerFactoryBean ehCacheManagerFactoryBean) {
-        EhCacheManager ehCacheManager = new EhCacheManager();
-        ehCacheManager.setCacheManager(ehCacheManagerFactoryBean.getObject());
-
-        return ehCacheManager;
+    public CacheManager getCacheManager() {
+        return cacheManager;
     }
 
     /** ======================================  SessionDAO  ====================================== **/

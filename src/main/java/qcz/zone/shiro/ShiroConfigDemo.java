@@ -6,7 +6,6 @@ import org.apache.shiro.realm.Realm;
 import org.apache.shiro.session.mgt.SessionManager;
 import org.apache.shiro.spring.web.ShiroFilterFactoryBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.ehcache.EhCacheManagerFactoryBean;
 import org.springframework.context.annotation.Bean;
 import qcz.zone.shiro.config.AbstractShiroConfig;
 import qcz.zone.shiro.config.ShiroProperties;
@@ -32,8 +31,8 @@ public class ShiroConfigDemo extends AbstractShiroConfig {
     private ShiroEhCacheFactory shiroFactory;
     
     @Bean(name = "shiroFactory")
-    public ShiroEhCacheFactory shiroEhCacheFactory(CacheManager cacheManager) {
-        return new ShiroEhCacheFactory(shiroService, cacheManager, shiroProperties);
+    public ShiroEhCacheFactory shiroEhCacheFactory() {
+        return new ShiroEhCacheFactory(shiroService, "/ehcache/ehcache-shiro.xml", shiroProperties);
     }
 
     @Bean(name = "shiroFilter")
@@ -54,15 +53,5 @@ public class ShiroConfigDemo extends AbstractShiroConfig {
     @Bean(name = "sessionManager")
     public SessionManager sessionManager() {
         return shiroFactory.createEhCacheSessionManager();
-    }
-
-    @Bean(name = "ehCacheManagerFactoryBean")
-    public EhCacheManagerFactoryBean ehCacheManagerFactoryBean() {
-        return ShiroEhCacheFactory.createEhCacheManagerFactoryBean("ehcache.xml");
-    }
-
-    @Bean(name = "cacheManager")
-    public CacheManager cacheManager(EhCacheManagerFactoryBean ehCacheManagerFactoryBean) {
-        return ShiroEhCacheFactory.createEhCacheManager(ehCacheManagerFactoryBean);
     }
 }
